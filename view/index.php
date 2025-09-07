@@ -123,8 +123,17 @@ switch ($action) {
         $search_results = $products; // Reset search results
         break;
 
-    case 'search_products':
-        // The search logic is handled before the switch statement
+    case 'sort_products':
+        $sort_by = filter_input(INPUT_GET, 'sort_by');
+        if ($sort_by === 'price') {
+            usort($search_results, function($a, $b) {
+                return $a['price'] <=> $b['price'];
+            });
+        } elseif ($sort_by === 'name') {
+            usort($search_results, function($a, $b) {
+                return strcmp($a['name'], $b['name']);
+            });
+        }
         break;
 
     default:

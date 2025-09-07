@@ -6,10 +6,24 @@ include 'view/header.php';
 
 <h1>Inventory Management</h1>
 
-<form action="index.php" method="get" class="search-form">
-    <input type="hidden" name="action" value="search_products">
-    <input type="text" name="search_term" placeholder="Search products...">
-    <button type="submit">Search</button>
+<div class="search-and-sort-container">
+    <form action="index.php" method="get" class="search-form">
+        <input type="hidden" name="action" value="search_products">
+        <input type="text" name="search_term" placeholder="Search products...">
+        <button type="submit" class="coffee-button">Search</button>
+    </form>
+    <a href="index.php?action=show_add_form" class="coffee-button view-all-button">
+        View All Products
+    </a>
+</div>
+
+<form action="index.php" method="get" class="sort-form">
+    <input type="hidden" name="action" value="sort_products">
+    <label for="sort_by">Sort By:</label>
+    <select name="sort_by" id="sort_by" onchange="this.form.submit()">
+        <option value="name" <?php if (isset($_GET['sort_by']) && $_GET['sort_by'] == 'name') echo 'selected'; ?>>Name</option>
+        <option value="price" <?php if (isset($_GET['sort_by']) && $_GET['sort_by'] == 'price') echo 'selected'; ?>>Price</option>
+    </select>
 </form>
 
 <?php if (isset($edit_index)) : ?>
@@ -22,19 +36,19 @@ include 'view/header.php';
             <div class="product-entry-box">
                 <div class="form-group">
                     <label>Product Name:</label>
-                    <input type="text" name="product_name" value="<?php echo htmlspecialchars($edit_product_data[0]); ?>">
+                    <input type="text" name="product_name" value="<?php echo htmlspecialchars($edit_product_data['name']); ?>">
                 </div>
                 <div class="form-group">
                     <label>Product Code:</label>
-                    <input type="text" name="product_code" value="<?php echo htmlspecialchars($edit_product_data[1]); ?>">
+                    <input type="text" name="product_code" value="<?php echo htmlspecialchars($edit_product_data['code']); ?>">
                 </div>
                 <div class="form-group">
                     <label>Price:</label>
-                    <input type="text" name="price" value="<?php echo htmlspecialchars($edit_product_data[2]); ?>">
+                    <input type="text" name="price" value="<?php echo htmlspecialchars($edit_product_data['price']); ?>">
                 </div>
                 <div class="form-group">
                     <label>Description:</label>
-                    <textarea name="description"><?php echo htmlspecialchars($edit_product_data[3]); ?></textarea>
+                    <textarea name="description"><?php echo htmlspecialchars($edit_product_data['description']); ?></textarea>
                 </div>
             </div>
 
@@ -85,19 +99,17 @@ include 'view/header.php';
         <form action="index.php" method="post" class="inventory-form">
             <input type="hidden" name="action" value="bulk_delete">
             <?php foreach ($search_results as $index => $product) :
-                // We must use the original products array for the correct index
                 $original_index = array_search($product, $products);
-                list($name, $code, $price, $description) = explode('|', $product);
-                if (!empty($name)) : ?>
+                if (!empty($product['name'])) : ?>
                     <div class='product-item'>
                         <div class="grid-item checkbox-column">
                             <input type="checkbox" name="delete_indices[]" value="<?php echo htmlspecialchars($original_index); ?>" class="delete-checkbox">
                         </div>
                         <div class="grid-item product-info-column">
-                            <h3 class="product-name"><?php echo htmlspecialchars($name); ?></h3>
-                            <p><strong>Code:</strong> <?php echo htmlspecialchars($code); ?></p>
-                            <p><strong>Price:</strong> $<?php echo htmlspecialchars($price); ?></p>
-                            <p><strong>Description:</strong> <?php echo htmlspecialchars($description); ?></p>
+                            <h3 class="product-name"><?php echo htmlspecialchars($product['name']); ?></h3>
+                            <p><strong>Code:</strong> <?php echo htmlspecialchars($product['code']); ?></p>
+                            <p><strong>Price:</strong> $<?php echo htmlspecialchars($product['price']); ?></p>
+                            <p><strong>Description:</strong> <?php echo htmlspecialchars($product['description']); ?></p>
                         </div>
                         <div class="grid-item button-column">
                             <button class='coffee-button edit-button' data-index='<?php echo htmlspecialchars($original_index); ?>' style='background-color:#4a90e2;'>Edit</button>
@@ -139,6 +151,5 @@ include 'view/header.php';
 </main>
 
 <?php
-// This will insert the content of footer.php, which contains the closing body and HTML tags.
 include 'view/footer.php';
 ?>
