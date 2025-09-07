@@ -6,14 +6,12 @@ include 'view/header.php';
 
 <h1>Inventory Management</h1>
 
-<!-- --- NEW CODE: Add a search bar to filter products --- -->
 <form action="index.php" method="get" class="search-form">
     <input type="hidden" name="action" value="search_products">
     <input type="text" name="search_term" placeholder="Search products...">
     <button type="submit">Search</button>
 </form>
 
-<!-- This is the conditional form for editing a product -->
 <?php if (isset($edit_index)) : ?>
     <section>
         <h2>Edit Product</h2>
@@ -39,7 +37,7 @@ include 'view/header.php';
                     <textarea name="description"><?php echo htmlspecialchars($edit_product_data[3]); ?></textarea>
                 </div>
             </div>
-            
+
             <button type="submit" class="coffee-button">
                 <span class="icon">💾</span> Update Product
             </button>
@@ -48,12 +46,11 @@ include 'view/header.php';
     </section>
 <?php endif; ?>
 
-<!-- This is the form for adding new products -->
 <section>
     <h2>Add New Products</h2>
     <form action="index.php" method="post" class="add-products-form">
         <input type="hidden" name="action" value="add_products">
-        
+
         <?php for ($i = 0; $i < 5; $i++) : ?>
         <div class="product-entry-box">
             <h3>Product #<?php echo $i + 1; ?></h3>
@@ -75,7 +72,7 @@ include 'view/header.php';
             </div>
         </div>
         <?php endfor; ?>
-        
+
         <button type="submit" class="coffee-button">
             <span class="icon">☕️</span> Add Products
         </button>
@@ -85,7 +82,6 @@ include 'view/header.php';
 <section class="inventory-list-container">
     <h2>Current Inventory</h2>
     <?php if (!empty($search_results)) : ?>
-        <!-- We use $search_results here instead of $products -->
         <form action="index.php" method="post" class="inventory-form">
             <input type="hidden" name="action" value="bulk_delete">
             <?php foreach ($search_results as $index => $product) :
@@ -104,11 +100,7 @@ include 'view/header.php';
                             <p><strong>Description:</strong> <?php echo htmlspecialchars($description); ?></p>
                         </div>
                         <div class="grid-item button-column">
-                            <form action='index.php' method='get'>
-                                <input type='hidden' name='action' value='show_edit_form'>
-                                <input type='hidden' name='index' value='<?php echo htmlspecialchars($original_index); ?>'>
-                                <button type='submit' class='coffee-button' style='background-color:#4a90e2;'>Edit</button>
-                            </form>
+                            <button class='coffee-button edit-button' data-index='<?php echo htmlspecialchars($original_index); ?>' style='background-color:#4a90e2;'>Edit</button>
                         </div>
                     </div>
                 <?php endif;
@@ -136,6 +128,12 @@ include 'view/header.php';
             }, 3000);
         }
     };
+    document.querySelectorAll('.edit-button').forEach(button => {
+        button.addEventListener('click', (event) => {
+            const index = event.target.dataset.index;
+            window.location.href = `index.php?action=show_edit_form&index=${index}`;
+        });
+    });
 </script>
 
 </main>
@@ -144,4 +142,3 @@ include 'view/header.php';
 // This will insert the content of footer.php, which contains the closing body and HTML tags.
 include 'view/footer.php';
 ?>
-

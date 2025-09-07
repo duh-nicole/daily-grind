@@ -14,12 +14,13 @@ if ($action === NULL) {
 }
 
 // Get the product data from the file
-$file = 'products.txt';
+$file = 'products.json';
 $products = [];
 if (file_exists($file) && filesize($file) > 0) {
-    $products_raw = file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-    foreach ($products_raw as $product_line) {
-        $products[] = $product_line;
+    $json_string = file_get_contents($file);
+    $products = json_decode($json_string, true);
+    if ($products === null) {
+        $products = []; // In case the file is corrupted
     }
 }
 
@@ -34,69 +35,70 @@ if ($action === 'search_products') {
     $search_results = [];
     foreach ($products as $product) {
         // Search through all product fields
-        if (str_contains(strtolower($product), $search_term)) {
+        if (str_contains(strtolower($product['name']), $search_term) || str_contains(strtolower($product['code']), $search_term) || str_contains(strtolower($product['description']), $search_term)) {
             $search_results[] = $product;
         }
     }
-    if (empty($search_results)) {
-        $message = "No products found for '{$search_term}'.";
-    }
 }
 
-// Check for a specific action
+// Process the action
 switch ($action) {
-    case 'show_add_form':
-        break;
-
     case 'add_products':
-        $product_names = filter_input(INPUT_POST, 'product_name', FILTER_DEFAULT, FILTER_REQUIRE_ARRAY);
-        $product_codes = filter_input(INPUT_POST, 'product_code', FILTER_DEFAULT, FILTER_REQUIRE_ARRAY);
-        $prices = filter_input(INPUT_POST, 'price', FILTER_DEFAULT, FILTER_REQUIRE_ARRAY);
-        $descriptions = filter_input(INPUT_POST, 'description', FILTER_DEFAULT, FILTER_REQUIRE_ARRAY);
+        // Get the new products from the form
+        $new_products_data = [
+            'product_name' => $_POST['product_name'] ?? [],
+            'product_code' => $_POST['product_code'] ?? [],
+            'price' => $_POST['price'] ?? [],
+            'description' => $_POST['description'] ?? []
+        ];
 
-        for ($i = 0; $i < count($product_names); $i++) {
-            $name = trim($product_names[$i]);
-            if (!empty($name)) { // Only add if the name is not empty
-                $code = trim($product_codes[$i]);
-                $price = str_replace('$', '', trim($prices[$i]));
-                $description = trim($descriptions[$i]);
-                $data = "$name|$code|$price|$description\n";
-                file_put_contents($file, $data, FILE_APPEND | LOCK_EX);
+        foreach ($new_products_data['product_name'] as $index => $name) {
+            $name = trim(htmlspecialchars($name));
+            if (!empty($name)) {
+                $code = trim(htmlspecialchars($new_products_data['product_code'][$index]));
+                $price = str_replace('$', '', trim(htmlspecialchars($new_products_data['price'][$index])));
+                $description = trim(htmlspecialchars($new_products_data['description'][$index]));
+
+                $products[] = [
+                    'name' => $name,
+                    'code' => $code,
+                    'price' => $price,
+                    'description' => $description
+                ];
             }
         }
-        $message = 'Products have been added!';
-        $products = file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-        $search_results = $products; // Reset search results
+        $json_data = json_encode($products, JSON_PRETTY_PRINT);
+        file_put_contents($file, $json_data);
+        $message = "Products added successfully.";
         break;
-    
+
     case 'bulk_delete':
-        $indices_to_delete = filter_input(INPUT_POST, 'delete_indices', FILTER_DEFAULT, FILTER_REQUIRE_ARRAY);
-        if ($indices_to_delete) {
+        $indices_to_delete = filter_input(INPUT_POST, 'delete_indices', FILTER_VALIDATE_INT, FILTER_REQUIRE_ARRAY);
+        if (!empty($indices_to_delete)) {
+            // Sort indices in descending order to prevent re-indexing issues
             rsort($indices_to_delete);
             foreach ($indices_to_delete as $index) {
                 if (isset($products[$index])) {
                     unset($products[$index]);
                 }
             }
-            $products = array_values($products);
-            file_put_contents($file, implode("\n", $products));
-            $message = count($indices_to_delete) . " products deleted successfully.";
-        } else {
-            $message = "No products selected for deletion.";
+            $products = array_values($products); // Re-index array
+            $json_data = json_encode($products, JSON_PRETTY_PRINT);
+            file_put_contents($file, $json_data);
+            $message = "Products deleted successfully.";
         }
-        $search_results = $products; // Reset search results
         break;
-        
+
     case 'show_edit_form':
         $index = filter_input(INPUT_GET, 'index', FILTER_VALIDATE_INT);
         if ($index !== false && isset($products[$index])) {
-            $edit_product_data = explode('|', $products[$index]);
+            $edit_product_data = $products[$index];
             $edit_index = $index;
         } else {
             $message = "Error: Product not found for editing.";
         }
         break;
-        
+
     case 'update_product':
         $index = filter_input(INPUT_POST, 'index', FILTER_VALIDATE_INT);
         if ($index !== false && isset($products[$index])) {
@@ -104,25 +106,30 @@ switch ($action) {
             $code = trim(htmlspecialchars(filter_input(INPUT_POST, 'product_code')));
             $price = str_replace('$', '', trim(htmlspecialchars(filter_input(INPUT_POST, 'price'))));
             $description = trim(htmlspecialchars(filter_input(INPUT_POST, 'description')));
-            
-            $products[$index] = "$name|$code|$price|$description";
-            
-            file_put_contents($file, implode("\n", $products));
+
+            $products[$index] = [
+                'name' => $name,
+                'code' => $code,
+                'price' => $price,
+                'description' => $description
+            ];
+
+            $json_data = json_encode($products, JSON_PRETTY_PRINT);
+            file_put_contents($file, $json_data);
             $message = "Product updated successfully.";
         } else {
             $message = "Error: Product not found for updating.";
         }
         $search_results = $products; // Reset search results
         break;
-        
+
     case 'search_products':
         // The search logic is handled before the switch statement
         break;
-        
+
     default:
-        $message = "Unknown action.";
+        $search_results = $products;
         break;
 }
 
-include 'home.php';
-
+include 'view/home.php';
